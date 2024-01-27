@@ -1,25 +1,28 @@
-import Image from "next/image";
+import { kv } from "@vercel/kv";
 import Link from "next/link";
 import DayState from "./components/DayState";
-
-export default function Home() {
-  const habits = {
-    "beber água": {
-      '2024-01-25': true,
-      '2024-01-26': false,
-      '2024-01-27': false,
-    },
-    "estudar": {
-      '2024-01-25': false,
-      '2024-01-26': true,
-      '2024-01-27': true,
-    },
-  };
+import DeletedButton from "./components/DeletedButton";
+export type Habits = {
+  [habit: string]: Record<string,boolean>;
+} | null
+export default async function Home() {
+  
+  const habits = await kv.hgetall("habits")
   const today = new Date()
   const todayWeekDay = today.getDay()
   const daysWeek = ['Dom', "Seg", "Ter", "Qua", "Qui", "Sex", "Sab"]
 
   const sortedWeekDay = daysWeek.slice(todayWeekDay + 1).concat(daysWeek.slice(0, todayWeekDay + 1))
+
+
+  const lastSevenDays = daysWeek.map((_,index) => {
+    const dateNow = new Date()
+    dateNow.setDate(dateNow.getDate() - index)
+
+    return dateNow.toISOString().slice(0,10)
+  }).reverse()
+
+  
   return (
     <main className="container relative flex flex-col gap-8 px-4 pt-16">
       {habits === null || Object.keys(habits).length === 0 && (
@@ -32,19 +35,19 @@ export default function Home() {
               <div className="flex justify-between items-center">
 
                 <span className="text-xl font-light text-white font-sans">{habit}</span>
-                <button>
-                  <Image src="/images/trash.svg" alt="Ícone de lixeira" width={20} height={20} />
-                </button>
+                <DeletedButton habit={habit} />
               </div>
+              <Link href={`habit/${habit}`} >
               <section className="grid grid-cols-7 bg-neutral-800 rounded-md p-2">
-                {sortedWeekDay.map((day) => (
+                {sortedWeekDay.map((day,index) => (
                   <div key={day} className="flex flex-col last:font-bold">
                     <span className="font-sans text-xs text-white text-center" >{day}</span>
                     {/* {day state} */}
-                    <DayState day={true} />
+                    <DayState day={habitStreak[lastSevenDays[index]]} />
                   </div>
                 ))}
               </section>
+              </Link>
             </div>
           )
         )
